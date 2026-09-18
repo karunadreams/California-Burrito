@@ -135,9 +135,6 @@ else:
     start_date = min_date
     end_date = max_date
 
-st.sidebar.markdown("---")
-st.sidebar.caption("Data Source: `data.xlsx` | 300,000 Transactions")
-
 # ---------------------------------------------------------
 # Data Filtering Logic
 # ---------------------------------------------------------
@@ -157,14 +154,29 @@ if selected_outlet != "All":
 if selected_order_type != "All":
     filtered_df = filtered_df[filtered_df["Order_Type"] == selected_order_type]
 
+# Download Filtered Data Button in Sidebar
+st.sidebar.markdown("---")
+csv_data = filtered_df.to_csv(index=False).encode('utf-8')
+st.sidebar.download_button(
+    label="📥 Download Filtered Data (CSV)",
+    data=csv_data,
+    file_name="filtered_sales_data.csv",
+    mime="text/csv",
+    use_container_width=True
+)
+
+st.sidebar.caption("Data Source: `data.xlsx` | 300,000 Transactions")
+
 # ---------------------------------------------------------
 # Header Section
 # ---------------------------------------------------------
-st.markdown("""
+total_records = len(filtered_df)
+
+st.markdown(f"""
     <div class="header-container">
         <div>
             <h1 class="header-title">🍔 Burger Town — Sales Analytics Dashboard</h1>
-            <div class="header-subtitle">Performance overview, revenue metrics, and sales trend analysis</div>
+            <div class="header-subtitle">Performance overview, revenue metrics, and sales trend analysis &bull; <b>{total_records:,}</b> filtered records</div>
         </div>
     </div>
 """, unsafe_allow_html=True)
@@ -180,14 +192,18 @@ total_revenue = filtered_df["Revenue"].sum()
 total_orders = filtered_df["BillNo"].nunique()
 avg_order_value = total_revenue / total_orders if total_orders > 0 else 0
 
-# Top Outlet Calculation
+# Top & Lowest Outlet Calculation
 outlet_rev = filtered_df.groupby("Outlet_Name")["Revenue"].sum()
 if not outlet_rev.empty:
     top_outlet = outlet_rev.idxmax()
     top_outlet_revenue = outlet_rev.max()
+    worst_outlet = outlet_rev.idxmin()
+    worst_outlet_revenue = outlet_rev.min()
 else:
     top_outlet = "N/A"
     top_outlet_revenue = 0
+    worst_outlet = "N/A"
+    worst_outlet_revenue = 0
 
 # ---------------------------------------------------------
 # KPI Cards Display
@@ -231,6 +247,20 @@ with kpi_col4:
     """, unsafe_allow_html=True)
 
 st.markdown("<br>", unsafe_allow_html=True)
+
+# ---------------------------------------------------------
+# Performance Summary Insight Banner
+# ---------------------------------------------------------
+if not outlet_rev.empty:
+    if len(outlet_rev) > 1:
+        st.info(
+            f"💡 **Performance Insight**: **{top_outlet}** is the best-performing outlet with **₹{top_outlet_revenue:,.2f}** in revenue, "
+            f"while **{worst_outlet}** is the lowest-performing outlet with **₹{worst_outlet_revenue:,.2f}** in revenue based on the filtered data."
+        )
+    else:
+        st.info(
+            f"💡 **Performance Insight**: Showing data for **{top_outlet}**, generating **₹{top_outlet_revenue:,.2f}** in revenue across {total_orders:,} unique orders."
+        )
 
 # ---------------------------------------------------------
 # Visualizations Section
@@ -338,7 +368,19 @@ st.markdown("<br>", unsafe_allow_html=True)
 # ---------------------------------------------------------
 # Top 10 Items Data Table
 # ---------------------------------------------------------
-st.subheader("🏆 Top 10 Items by Revenue")
+table_col1, table_col2 = st.columns([3, 1])
+with table_col1:
+    st.subheader("🏆 Top 10 Items by Revenue")
+
+with table_col2:
+    st.download_button(
+        label="📥 Download Data CSV",
+        data=csv_data,
+        file_name="filtered_sales_data.csv",
+        mime="text/csv",
+        use_container_width=True,
+        key="table_download_btn"
+    )
 
 top_items = (
     filtered_df.groupby(["Item", "Group"])
@@ -364,3 +406,4 @@ st.dataframe(
     use_container_width=True,
     hide_index=True
 )
+
