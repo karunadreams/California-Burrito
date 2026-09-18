@@ -165,8 +165,6 @@ st.sidebar.download_button(
     use_container_width=True
 )
 
-st.sidebar.caption("Data Source: `data.xlsx` | 300,000 Transactions")
-
 # ---------------------------------------------------------
 # Header Section
 # ---------------------------------------------------------
