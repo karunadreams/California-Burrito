@@ -90,6 +90,33 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ---------------------------------------------------------
+# Formatting Helper Functions
+# ---------------------------------------------------------
+def format_rupees(val, decimals=0):
+    """Formats numeric values into Indian comma separated rupee strings (e.g. ₹6,94,80,952)."""
+    if pd.isna(val) or val is None:
+        return "₹0"
+    val_int = int(abs(val))
+    s = str(val_int)
+    if len(s) <= 3:
+        res = s
+    else:
+        last3 = s[-3:]
+        rest = s[:-3]
+        groups = []
+        while len(rest) > 2:
+            groups.append(rest[-2:])
+            rest = rest[:-2]
+        if rest:
+            groups.append(rest)
+        groups.reverse()
+        res = ",".join(groups) + "," + last3
+    
+    dec_part = f"{abs(val) - val_int:.2f}"[1:] if decimals > 0 else ""
+    prefix = "-" if val < 0 else ""
+    return f"₹{prefix}{res}{dec_part}"
+
+# ---------------------------------------------------------
 # Data Loading with Cache
 # ---------------------------------------------------------
 @st.cache_data
@@ -212,7 +239,7 @@ with kpi_col1:
     st.markdown(f"""
         <div class="kpi-card">
             <div class="kpi-title">Total Revenue</div>
-            <div class="kpi-value">₹{total_revenue:,.2f}</div>
+            <div class="kpi-value">{format_rupees(total_revenue)}</div>
             <div class="kpi-subtext">Across filtered transactions</div>
         </div>
     """, unsafe_allow_html=True)
@@ -230,7 +257,7 @@ with kpi_col3:
     st.markdown(f"""
         <div class="kpi-card">
             <div class="kpi-title">Average Order Value</div>
-            <div class="kpi-value">₹{avg_order_value:,.2f}</div>
+            <div class="kpi-value">{format_rupees(avg_order_value, decimals=2)}</div>
             <div class="kpi-subtext">Revenue per unique bill</div>
         </div>
     """, unsafe_allow_html=True)
@@ -240,7 +267,7 @@ with kpi_col4:
         <div class="kpi-card">
             <div class="kpi-title">Top Outlet</div>
             <div class="kpi-value">{top_outlet}</div>
-            <div class="kpi-subtext">₹{top_outlet_revenue:,.2f} revenue</div>
+            <div class="kpi-subtext">{format_rupees(top_outlet_revenue)} revenue</div>
         </div>
     """, unsafe_allow_html=True)
 
@@ -252,12 +279,12 @@ st.markdown("<br>", unsafe_allow_html=True)
 if not outlet_rev.empty:
     if len(outlet_rev) > 1:
         st.info(
-            f"💡 **Performance Insight**: **{top_outlet}** is the best-performing outlet with **₹{top_outlet_revenue:,.2f}** in revenue, "
-            f"while **{worst_outlet}** is the lowest-performing outlet with **₹{worst_outlet_revenue:,.2f}** in revenue based on the filtered data."
+            f"💡 **Performance Insight**: **{top_outlet}** is the best-performing outlet with **{format_rupees(top_outlet_revenue)}** in revenue, "
+            f"while **{worst_outlet}** is the lowest-performing outlet with **{format_rupees(worst_outlet_revenue)}** in revenue based on the filtered data."
         )
     else:
         st.info(
-            f"💡 **Performance Insight**: Showing data for **{top_outlet}**, generating **₹{top_outlet_revenue:,.2f}** in revenue across {total_orders:,} unique orders."
+            f"💡 **Performance Insight**: Showing data for **{top_outlet}**, generating **{format_rupees(top_outlet_revenue)}** in revenue across {total_orders:,} unique orders."
         )
 
 # ---------------------------------------------------------
@@ -318,7 +345,7 @@ with row1_col2:
     )
     fig_donut.update_traces(
         textinfo="percent+label",
-        hovertemplate="<b>%{label}</b><br>Revenue: ₹%{value:,.2f}<br>Share: %{percent}"
+        hovertemplate="<b>%{label}</b><br>Revenue: ₹%{value:,.0f}<br>Share: %{percent}"
     )
     fig_donut.update_layout(
         height=380,
@@ -350,7 +377,7 @@ fig_trend = px.line(
 fig_trend.update_traces(
     line=dict(color="#d97706", width=3),
     marker=dict(size=8, color="#b45309", symbol="circle"),
-    hovertemplate="<b>%{x|%B %Y}</b><br>Revenue: ₹%{y:,.2f}<extra></extra>"
+    hovertemplate="<b>%{x|%B %Y}</b><br>Revenue: ₹%{y:,.0f}<extra></extra>"
 )
 fig_trend.update_layout(
     xaxis_title="Month",
@@ -397,7 +424,7 @@ top_items_display.columns = ["Item Name", "Category", "Quantity Sold", "Total Re
 
 # Apply formatting
 top_items_display["Quantity Sold"] = top_items_display["Quantity Sold"].apply(lambda x: f"{x:,}")
-top_items_display["Total Revenue (₹)"] = top_items_display["Total Revenue (₹)"].apply(lambda x: f"₹{x:,.2f}")
+top_items_display["Total Revenue (₹)"] = top_items_display["Total Revenue (₹)"].apply(lambda x: format_rupees(x))
 
 st.dataframe(
     top_items_display,
